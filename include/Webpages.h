@@ -1,0 +1,514 @@
+//Bilder in Dateisystem laden und aufrufen
+// https://microcontrollerslab.com/upload-files-esp32-spiffs-vs-code-platformio-ide/
+//https://www.favicon.cc/
+//https://base64.guru/converter/encode/image/ico
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
+<head>
+  <title>LuftCheck %espBeschreibung%</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href='data:image/x-icon;base64, AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAaFxQAAAAAAEOmEgBmOQgA1tawAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEREREREREREREREREREREQAAAAAAAAAABEREREREREAERERDNEREQAREREM0RERABEREIkREREAENEQiRERDQAQ0QiRERENABEMiJERENEAERDJERDNEQARCJDMzRERABEREREREREAAAAAAAAAAABERERERERERERERERERERH//wAA//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//AAD//wAA' rel='icon' type='image/x-icon' />
+  <style>
+    html {font-family: Arial; display: inline-block; text-align: center;}
+    h2 {font-size: 2.5rem; color: #b30000; margin-top: 0.3em; margin-bottom: 0.1em;}
+    h3 {font-size: 2.0rem; color: #b30000; margin-top: 0.1em; margin-bottom: 0.4em;}
+	  h4 {margin-top: 0.7em; margin-bottom: 0.3em;}
+    p {font-size: 2.5rem;}
+    body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
+    .cnt {font-size: 0.9rem;}
+    .switch {position: relative; display: inline-block; width: 96px; height: 45px} 
+    .switch input {display: none}
+    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 6px}
+    .slider:before {position: absolute; content: ""; height: 28px; width: 40px; left: 8px; bottom: 8px; background-color: #fff; -webkit-transition: .4s; transition: .4s; border-radius: 3px}
+    .text .slider:after {
+      position: absolute;
+      content: "AUS";
+      color: #ccc;
+      font-weight: bold;
+      height: 1.6em;
+      left: -3.1em;
+      bottom: 0.4em;
+    }
+    .text input:checked + .slider:after {
+      position: absolute;
+      content: "AN";
+      color: #b30000;
+      left: 6.9em;
+    }  
+    .display .slider:after {
+      position: absolute;
+      content: "Messanzeige";
+      color: #b30000;
+	    font-size: 0.8rem;
+      font-weight: bold;
+      height: 1.6em;
+      left: -7.1em;
+      bottom: 0.6em;
+    }
+    .display input:checked + .slider:after {
+      position: absolute;
+      content: "Wettervorhersage";
+	  font-size: 0.8rem;
+      color: #b30000;
+      left: 8.6em;
+    } 
+    input:checked+.slider {background-color: #b30000}
+    input:checked+.slider:before {-webkit-transform: translateX(40px); -ms-transform: translateX(40px); transform: translateX(40px)}
+  </style>
+</head>
+
+<script>
+
+  function SetCO2Img()
+  {  let myCO2 =  document.getElementById("co2").innerHTML;
+
+      if      (myCO2<%CO2mittel%)  { document.getElementById("ZeigerImg").src = "/Zeiger1_jpg"; }
+      else if (myCO2<%CO2hoch%)   { document.getElementById("ZeigerImg").src = "/Zeiger2_jpg"; }
+      else                        { document.getElementById("ZeigerImg").src = "/Zeiger3_jpg"; }
+  }
+
+  setInterval(function ( ) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        document.getElementById("co2").innerHTML = this.responseText;
+        SetCO2Img();
+      }
+    };
+    xhttp.open("GET", "/co2", true);
+    xhttp.send();
+  }, 30000 ) ;
+
+  setInterval(function ( ) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        document.getElementById("hum").innerHTML = this.responseText;
+      }
+    };
+    xhttp.open("GET", "/hum", true);
+    xhttp.send();
+  }, 30000 ) ;
+
+  setInterval(function ( ) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        document.getElementById("temp").innerHTML = this.responseText;
+      }
+    };
+    xhttp.open("GET", "/temp", true);
+    xhttp.send();
+  }, 30000 ) ;
+
+  setInterval(function ( ) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        document.getElementById("esptime").innerHTML = this.responseText;
+      }
+    };
+    xhttp.open("GET", "/esptime", true);
+    xhttp.send();
+  }, 30000 ) ;
+
+  function toggleCheckbox(element) {
+    var xhr = new XMLHttpRequest();
+    if(element.checked) { xhr.open("GET", "/handleFunktionen?"+element.id+"=1", true); }
+    else                { xhr.open("GET", "/handleFunktionen?"+element.id+"=0", true); }
+    xhr.send();
+  }
+
+  function toggleCheckbox2(element) {
+    var xhr = new XMLHttpRequest();
+    if(element.checked) { xhr.open("GET", "/handleFunktionen?output="+element.id+"&state=1", true); }
+    else                { xhr.open("GET", "/handleFunktionen?output="+element.id+"&state=0", true); }
+    xhr.send();
+  }
+
+  document.addEventListener('DOMContentLoaded', function() 
+  {
+    SetCO2Img();
+  }, false);
+
+</script>
+
+<body>
+  <h2>LuftCheck</h2>
+  <h3>%espBeschreibung%</h3>
+  <img id="ZeigerImg" src="" width="77" height="44" />
+  CO2:
+  <span id="co2">%MYCO2%</span> ppm
+  <br><br>
+  <img src="/Thermometer_jpg" width="40" height="80" /> 
+  &nbspTemp:
+  <span id="temp">%MYTEMP%</span> &#176;C
+  %showHUM% 
+  <br><br><hr>
+  Messzeit: <span id="esptime">%MYTIME%</span> &nbsp  &nbsp <a href="\diagramm" style="color:#b30000">Diagramm</a>
+  <br><hr>
+  %BUTTONPLACEHOLDER%
+  <br>
+  <br>
+  <div class='cnt'>
+  Webcounter %COUNTER% </div>
+</body>
+</html>
+)rawliteral";
+
+
+
+//==============================================================================================================================================
+//==============================================================================================================================================
+const char Diagramm_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
+<head>
+  <title>LuftCheck %espBeschreibung% Messwerte</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href='data:image/x-icon;base64, AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAaFxQAAAAAAEOmEgBmOQgA1tawAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEREREREREREREREREREREQAAAAAAAAAABEREREREREAERERDNEREQAREREM0RERABEREIkREREAENEQiRERDQAQ0QiRERENABEMiJERENEAERDJERDNEQARCJDMzRERABEREREREREAAAAAAAAAAABERERERERERERERERERERH//wAA//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//AAD//wAA' rel='icon' type='image/x-icon' />
+
+  <style type="text/css">
+    html {font-family: Arial; display: inline-block; text-align: center;}
+    h2 {font-size: 2.5rem; color: #b30000; margin-top: 0.3em; margin-bottom: 0.1em;}
+    h3 {font-size: 2.0rem; color: #b30000; margin-top: 0.1em; margin-bottom: 0.4em;}
+	  h4 {margin-top: 0.7em; margin-bottom: 0.3em;}
+    p  {font-size: 2.5rem;}
+	text {font-size: 0.9rem; font-family:Arial; fill:#404040;}
+	#s0 { fill:#404040;  }
+	#s1 { fill:LimeGreen;  }
+	#s2 { fill:DarkOrange;  }
+	#s3 { fill:Crimson;  }
+  #s4 { fill:OrangeRed;  }
+  #s5 { fill:SteelBlue;  }
+		
+	#statSvg rect{opacity: 0.7;}
+	#statSvg rect:hover{opacity: 0.2;}	
+  </style>	
+</head>
+<body>
+  <h2>Luftcheck co2 Diagramm</h2>
+  <h3>%espBeschreibung%</h3>
+
+  %DIAGRAMM% 
+  <br><br>
+  %DIAGRAMMtemp%
+  <br><br>
+  %DIAGRAMMhum%
+
+  <br> <a href="\" style="color:#b30000">LuftCheck Startseite</a><br> <br> 
+</body>
+)rawliteral";
+
+//==============================================================================================================================================
+//==============================================================================================================================================
+const char SETUP_html[] PROGMEM = R"rawliteral(
+
+<!DOCTYPE HTML><html>
+<head>
+  <title>ESP LuftCheck %espBeschreibung% SETUP</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <style>
+    html{font-family:system-ui,sans-serif;text-align:center;background:#f4f7fa;color:#222}
+    body{margin:0;padding:1.5em}
+    h2,h3{color:#b30000;margin-top:1em}
+    .card{
+      background:#fff;
+      border-radius:12px;
+      padding:1.5em;
+      max-width:500px;
+      margin:1em auto;
+      box-shadow:0 4px 8px rgba(0,0,0,0.1);
+      text-align:left;
+    }
+    label{display:block;font-weight:600;margin-top:1em}
+    input[type="text"],input[type="password"],select{
+      width:100%%;
+      padding:0.7em;
+      margin-top:0.3em;
+      font-size:1em;
+      border:1px solid #ccc;
+      border-radius:8px;
+      box-sizing:border-box;
+    }
+    input[readonly]{background:#eee;color:#666}
+    input[type="submit"]{
+      width:100%%;
+      margin-top:1.5em;
+      padding:0.9em;
+      font-size:1.1em;
+      border:none;
+      border-radius:8px;
+      background-color:#b30000;
+      color:#fff;
+      cursor:pointer;
+      transition:background 0.2s;
+    }
+    input[type="submit"]:hover{background-color:#900000}
+    a{
+      display:inline-block;
+      margin-top:1.5em;
+      color:#b30000;
+      text-decoration:none;
+    }
+    a:hover{text-decoration:underline}
+    small{font-size:0.8em;color:#555}
+    @media(max-width:400px){
+      h2,h3{font-size:1.2em}
+      input,select{font-size:0.95em}
+    }
+  </style>
+</head>
+<body>
+
+  <h2>ESP LuftCheck</h2>
+
+  <div class="card">
+    <h3>Einstellungen</h3>
+    <form action="/setup" method="post">
+      <label>openweathermap <a href="%weatherlink%" target="_blank" rel="noopener noreferrer">LINK:</a></label>
+      <input type="text" name="weatherlink" value="%weatherlink%">
+
+      <label>openweathermap ORT:</label>
+      <input type="text" name="weatherpara" value="%weatherparameter%">
+
+      <label>openweathermap KEY:</label>
+      <input type="text" name="weatherkey" value="%weatherkey%">
+
+      <input type="submit" value="Speichern">
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>LuftCheck Beschreibung</h3>
+    <form action="/setup" method="post">
+      <label>Beschreibung, Titeltext der Webseiten:</label>
+      <input type="text" name="espBeschreibung" value="%espBeschreibung%">
+      <input type="submit" value="Speichern">
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Kalibrationswerte</h3>
+    <form action="/setup" method="post">
+      <label>calCO2:</label>
+      <input type="text" name="calCO2" value="%calCO2%">
+
+      <label>calTemp:</label>
+      <input type="text" name="calTemp" value="%calTemp%">
+
+      <label>calHum:</label>
+      <input type="text" name="calHum" value="%calHum%">
+
+      <small><br>Achtung: Zahlen m&uuml;ssen mit Punkt als Kommazeichen eingegeben werden!</small>
+      <input type="submit" value="Speichern">
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>MQTT Einstellungen</h3>
+    <form action="/setup" method="post">
+      <label>Host:</label>
+      <input type="text" name="mqttLink" value="%mqttLink%">
+
+      <label>User:</label>
+      <input type="text" name="mqttUser" value="%mqttUser%">
+
+      <label>KW:</label>
+      <input type="text" name="mqttKW" value="%mqttKW%">
+
+      <label>Topic:</label>
+      <input type="text" name="mqttTopic" value="%mqttTopic%">
+
+      <label>MQTT retain:</label>
+
+            <label class="switch">
+              <input type="checkbox" id="mqttRetainToggle">
+              <span class="slider"></span>
+            </label>
+            <input type="hidden" id="mqttRetain" name="mqttRetain" value="%mqttRetain%">
+           
+
+
+
+
+
+
+
+
+      <label>Sendeintervall min:</label>
+      <input type="text" name="mqttIntervall" value="%mqttIntervall%">
+
+      <small><br>Achtung: Sendeintervall darf keine Kommastellen enthalten!<br>0 = keine MQTT-Daten</small>
+      <input type="submit" value="Speichern">
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>CO2 Alarm</h3>
+    <form action="/setup" method="post">
+      <label>CO2 mittlere Luftqualit&auml;t:</label>
+      <input type="text" name="CO2mittel" value="%CO2mittel%">
+
+      <label>CO2 schlechte Luftqualit&auml;t:</label>
+      <input type="text" name="CO2hoch" value="%CO2hoch%">
+
+      <label>Akustischer Alarm:</label>
+      <select name="CO2alarm">%CO2alarm%</select>
+
+      <small><br>Achtung: Zahlen d&uuml;rfen keine Kommastellen enthalten!</small>
+      <input type="submit" value="Speichern">
+    </form>
+  </div>
+
+  <a href="\">Startseite</a>
+  <br><br>
+  <small>Webcounter %COUNTER%</small>
+
+  <script>
+    (function(){
+      var t=document.getElementById('mqttRetainToggle');
+      var h=document.getElementById('mqttRetain');
+      if(h&&t){
+        t.checked=(h.value==="1");
+        t.addEventListener('change',function(){
+          h.value=t.checked?"1":"0";
+        });
+      }
+    })();
+  </script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+)rawliteral";
+
+
+
+
+
+
+
+const char SETUP_SMARTLAMPhtml[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
+<head>
+  <title>ESP SmartLamp %espBeschreibung% SETUP</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    html{font-family:Arial,sans-serif;text-align:center;background:#f0f4f9}
+    body{max-width:600px;margin:0 auto;padding:10px}
+    h2{font-size:1.6rem;margin:10px 0}
+    h3{font-size:1.1rem;margin:10px 0}
+    .card{background:#ffffff;border:1px solid #ccc;border-radius:6px;
+          padding:10px;margin:10px 0;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+    table{border-collapse:collapse}
+    td{padding:4px 4px;font-size:0.9rem;text-align:left;vertical-align:middle}
+    td.label{font-weight:bold}
+    input[type=text]{box-sizing:border-box;padding:4px;font-size:0.9rem;width:18em}
+    input[type=submit]{padding:6px 16px;margin-top:8px;font-size:0.9rem}
+    .hint{font-size:0.8rem;color:#555;text-align:left}
+    .switch{position:relative;display:inline-block;width:46px;height:24px;vertical-align:middle}
+    .switch input{display:none}
+    .slider{position:absolute;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:12px}
+    .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;top:3px;
+                   background:#fff;transition:.2s;border-radius:9px}
+    input:checked+.slider{background:#4caf50}
+    input:checked+.slider:before{transform:translateX(22px)}
+    a{font-size:0.9rem}
+  </style>
+</head>
+
+<body>
+  <h2>ESP SmartLamp %espBeschreibung% Setup</h2>
+
+  <form action="/setup" method="post">
+    <div class="card">
+      <h3>Beschreibung</h3>
+      <table>
+        <tr>
+          <td class="label">Name</td>
+          <td><input type="text" name="espBeschreibung" value="%espBeschreibung%"></td>
+        </tr>
+         <tr>
+          <td class="label"> </td>
+          <td class="hint">Wird in Titeln und &Uuml;berschriften angezeigt.</td>
+        </tr>
+      </table>
+      
+    </div>
+
+    <div class="card">
+      <h3>MQTT</h3>
+      <table>
+        <tr>
+          <td class="label">Host</td>
+          <td><input type="text" name="mqttLink" value="%mqttLink%"></td>
+        </tr>
+        <tr>
+          <td class="label">User</td>
+          <td><input type="text" name="mqttUser" value="%mqttUser%"></td>
+        </tr>
+        <tr>
+          <td class="label">Passwort</td>
+          <td><input type="text" name="mqttKW" value="%mqttKW%"></td>
+        </tr>
+        <tr>
+          <td class="label">Topic</td>
+          <td><input type="text" name="mqttTopic" value="%mqttTopic%"></td>
+        </tr>
+        <tr>
+          <td class="label">Intervall (min)</td>
+          <td><input type="text" name="mqttIntervall" value="%mqttIntervall%"></td>
+        </tr>
+        <tr>
+          <td>  </td>
+          <td class="hint">
+            Nur ganze Minuten, keine Kommastellen.<br>
+            0 = keine MQTT-Daten senden.
+          </td>
+        </tr>
+        <tr>
+          <td class="label">Retain</td>
+          <td>
+            <label class="switch">
+              <input type="checkbox" id="mqttRetainToggle">
+              <span class="slider"></span>
+            </label>
+            <input type="hidden" id="mqttRetain" name="mqttRetain" value="%mqttRetain%">
+            <span class="hint">1 = an, 0 = aus</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <input type="submit" value="Speichern">
+  </form>
+
+  <p><a href="\">Zur&uuml;ck zur SmartLamp</a></p>
+
+  <script>
+    (function(){
+      var t=document.getElementById('mqttRetainToggle');
+      var h=document.getElementById('mqttRetain');
+      if(h&&t){
+        t.checked=(h.value==="1");
+        t.addEventListener('change',function(){
+          h.value=t.checked?"1":"0";
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
+)rawliteral";
